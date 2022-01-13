@@ -74,7 +74,10 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Train the model
     log.info("Starting training!")
+    print('Start Training!')
     trainer.fit(model=model, datamodule=datamodule)
+
+    #TODO start from here
 
     # Get metric score for hyperparameter optimization
     optimized_metric = config.get("optimized_metric")

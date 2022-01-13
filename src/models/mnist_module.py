@@ -8,6 +8,7 @@ from torchmetrics.classification.accuracy import Accuracy
 from src.models.components.simple_dense_net import SimpleDenseNet
 
 
+
 class MNISTLitModule(LightningModule):
     """
     Example of LightningModule for MNIST classification.
@@ -124,3 +125,4 @@ class MNISTLitModule(LightningModule):
         return torch.optim.Adam(
             params=self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay
         )
+

@@ -166,8 +166,8 @@ class LogConfusionMatrix(Callback):
             # set font size
             sn.heatmap(confusion_matrix, annot=True, annot_kws={"size": 8}, fmt="g")
 
-            # names should be uniqe or else charts from different experiments in wandb will overlap
-            experiment.log({f"confusion_matrix/{experiment.name}": wandb.Image(plt)}, commit=False)
+            # names should be unique or else charts from different experiments in wandb will overlap
+            experiment.log({f"val_confusion_matrix/{experiment.name}": wandb.Image(plt)}, commit=False)
 
             # according to wandb docs this should also work but it crashes
             # experiment.log(f{"confusion_matrix/{experiment.name}": plt})
