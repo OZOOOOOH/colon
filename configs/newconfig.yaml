@@ -7,7 +7,7 @@ defaults:
   - model: colon.yaml
   - datamodule: colon.yaml
   - callbacks: default.yaml
-  - logger: null # set logger here or use command line (e.g. `python run.py logger=wandb`)
+  - logger: wandb # set logger here or use command line (e.g. `python run.py logger=wandb`)
 
   # modes are special collections of config options for different purposes, e.g. debugging
   - mode: default.yaml
@@ -46,7 +46,7 @@ ignore_warnings: True
 test_after_training: True
 
 # seed for random number generators in pytorch, numpy and python.random
-seed: 7
+seed: 42
 
 # name of the run, should be used along with experiment mode
 name: null

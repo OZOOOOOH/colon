@@ -95,6 +95,7 @@ class MNISTDataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
+        print('Test data loaded !!')
         return DataLoader(
             dataset=self.data_test,
             batch_size=self.hparams.batch_size,

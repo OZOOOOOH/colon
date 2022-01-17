@@ -1,12 +1,12 @@
 import logging
 import warnings
 from typing import List, Sequence
-
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities import rank_zero_only
+import pandas as pd
 
 
 def get_logger(name=__name__) -> logging.Logger:
@@ -17,13 +17,13 @@ def get_logger(name=__name__) -> logging.Logger:
     # this ensures all logging levels get marked with the rank zero decorator
     # otherwise logs would get multiplied for each GPU process in multi-GPU setup
     for level in (
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "exception",
-        "fatal",
-        "critical",
+            "debug",
+            "info",
+            "warning",
+            "error",
+            "exception",
+            "fatal",
+            "critical",
     ):
         setattr(logger, level, rank_zero_only(getattr(logger, level)))
 
@@ -72,18 +72,18 @@ def extras(config: DictConfig) -> None:
 
 @rank_zero_only
 def print_config(
-    config: DictConfig,
-    fields: Sequence[str] = (
-        "trainer",
-        "model",
-        "datamodule",
-        "callbacks",
-        "logger",
-        "test_after_training",
-        "seed",
-        "name",
-    ),
-    resolve: bool = True,
+        config: DictConfig,
+        fields: Sequence[str] = (
+                "trainer",
+                "model",
+                "datamodule",
+                "callbacks",
+                "logger",
+                "test_after_training",
+                "seed",
+                "name",
+        ),
+        resolve: bool = True,
 ) -> None:
     """Prints content of DictConfig using Rich library and its tree structure.
 
@@ -115,12 +115,12 @@ def print_config(
 
 @rank_zero_only
 def log_hyperparameters(
-    config: DictConfig,
-    model: pl.LightningModule,
-    datamodule: pl.LightningDataModule,
-    trainer: pl.Trainer,
-    callbacks: List[pl.Callback],
-    logger: List[pl.loggers.LightningLoggerBase],
+        config: DictConfig,
+        model: pl.LightningModule,
+        datamodule: pl.LightningDataModule,
+        trainer: pl.Trainer,
+        callbacks: List[pl.Callback],
+        logger: List[pl.loggers.LightningLoggerBase],
 ) -> None:
     """This method controls which parameters from Hydra config are saved by Lightning loggers.
 
@@ -154,12 +154,12 @@ def log_hyperparameters(
 
 
 def finish(
-    config: DictConfig,
-    model: pl.LightningModule,
-    datamodule: pl.LightningDataModule,
-    trainer: pl.Trainer,
-    callbacks: List[pl.Callback],
-    logger: List[pl.loggers.LightningLoggerBase],
+        config: DictConfig,
+        model: pl.LightningModule,
+        datamodule: pl.LightningDataModule,
+        trainer: pl.Trainer,
+        callbacks: List[pl.Callback],
+        logger: List[pl.loggers.LightningLoggerBase],
 ) -> None:
     """Makes sure everything closed properly."""
 
@@ -169,3 +169,18 @@ def finish(
             import wandb
 
             wandb.finish()
+
+
+def bring_dataset_csv(datatype='COLON_PATCHES_1024', stage=None):
+    # Directories
+    PATH = f"/media/quiil/data1/data/colon_tma/{datatype}/"
+
+    # Read CSV file
+    if stage == "fit" or stage is None:
+        df_train = pd.read_csv(PATH + "train.csv")
+        df_val = pd.read_csv(PATH + "valid.csv")
+        return df_train, df_val
+
+    else:
+        df_test = pd.read_csv(PATH + "test.csv")
+        return df_test
