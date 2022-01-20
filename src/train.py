@@ -1,5 +1,4 @@
 from typing import List, Optional
-
 import hydra
 from omegaconf import DictConfig
 from pytorch_lightning import (
@@ -72,7 +71,21 @@ def train(config: DictConfig) -> Optional[float]:
         logger=logger,
     )
 
+    # log.info("Tune Learning Rate!")
+    # # trainer.tune(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+    # trainer.tune(model, datamodule)
+    # datamodule.setup()
+    # lr_finder = trainer.tuner.lr_find(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+    # # lr_finder = trainer.tuner.lr_find(model, datamodule)
+    # new_batch_size = trainer.tuner.scale_batch_size(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+    # new_lr = lr_finder.suggestion()
+    # model.hparams.lr = new_lr
+    # model.hparams.batch_size = new_batch_size
+    # print(f'new_lr: {new_lr}')
+    # print(f'new_batch_size: {new_batch_size}')
+
     # Train the model
+
     log.info("Starting training!")
     trainer.fit(model=model, datamodule=datamodule)
 

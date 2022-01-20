@@ -173,7 +173,8 @@ def finish(
 
 def bring_dataset_csv(datatype='COLON_PATCHES_1024', stage=None):
     # Directories
-    PATH = f"/media/quiil/data1/data/colon_tma/{datatype}/"
+    PATH = f"/home/compu/jh/data/colon_tma/{datatype}/"
+    # PATH = f"/media/quiil/data1/data/colon_tma/{datatype}/"
 
     # Read CSV file
     if stage == "fit" or stage is None:

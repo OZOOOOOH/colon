@@ -52,6 +52,7 @@ class ColonDataModule(LightningDataModule):
                 # Convert image and mask to torch.Tensor
             ]
         )
+
         # Validation/Test augmentation policy
         self.test_transform = Compose(
             [

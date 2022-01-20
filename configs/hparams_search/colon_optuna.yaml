@@ -30,7 +30,7 @@ hydra:
     # learn more here: https://optuna.readthedocs.io/en/stable/reference/samplers.html
     sampler:
       _target_: optuna.samplers.TPESampler
-      seed: zz
+      seed: 42
       consider_prior: true
       prior_weight: 1.0
       consider_magic_clip: true
@@ -44,17 +44,8 @@ hydra:
     search_space:
       datamodule.batch_size:
         type: categorical
-        choices: [32, 64, 128]
+        choices: [16, 32, 64]
       model.lr:
         type: float
         low: 0.0001
         high: 0.2
-      model.lin1_size:
-        type: categorical
-        choices: [32, 64, 128, 256, 512]
-      model.lin2_size:
-        type: categorical
-        choices: [32, 64, 128, 256, 512]
-      model.lin3_size:
-        type: categorical
-        choices: [32, 64, 128, 256, 512]
