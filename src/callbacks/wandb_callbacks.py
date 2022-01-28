@@ -139,7 +139,7 @@ class LogConfusionMatrix(Callback):
         self.ready = True
 
     def on_validation_batch_end(
-        self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
+            self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
     ):
         """Gather data from single batch."""
         if self.ready:
@@ -164,7 +164,10 @@ class LogConfusionMatrix(Callback):
             sn.set(font_scale=1.4)
 
             # set font size
-            sn.heatmap(confusion_matrix, annot=True, annot_kws={"size": 8}, fmt="g")
+            p = sn.heatmap(confusion_matrix, annot=True, annot_kws={"size": 8}, fmt="g")
+
+            p.set_xlabel("Predicted Labels")
+            p.set_ylabel("True Labels")
 
             # names should be unique or else charts from different experiments in wandb will overlap
             experiment.log({f"val_confusion_matrix/{experiment.name}": wandb.Image(plt)}, commit=False)
@@ -197,7 +200,7 @@ class LogF1PrecRecHeatmap(Callback):
         self.ready = True
 
     def on_validation_batch_end(
-        self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
+            self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx
     ):
         """Gather data from single batch."""
         if self.ready:
@@ -267,7 +270,7 @@ class LogImagePredictions(Callback):
 
             # get a validation batch from the validation dat loader
             val_samples = next(iter(trainer.datamodule.val_dataloader()))
-            val_imgs, val_labels = val_samples
+            val_imgs, val_labels, val_img_path = val_samples
 
             # run the batch through the network
             val_imgs = val_imgs.to(device=pl_module.device)

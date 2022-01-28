@@ -1,8 +1,7 @@
 from typing import Any, List
 import torch
-import torch.nn as nn
 import timm
-
+from pytorch_lightning import plugins
 from pytorch_lightning import LightningModule
 from torchmetrics import MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
@@ -11,12 +10,20 @@ from torchmetrics.classification.accuracy import Accuracy
 class ColonLitModule(LightningModule):
     def __init__(
             self,
-            lr: float = 0.001,
+            lr: float = 1e-4,
             weight_decay: float = 0.0005,
             t_max: int = 20,
             min_lr: int = 1e-6,
+            T_0 = 15,
+            T_mult = 2,
+            eta_min=1e-6,
             name='vit_base_patch16_224',
-            pretrained=True
+            pretrained=True,
+            scheduler='ReduceLROnPlateau',
+            factor=0.5,
+            patience=5,
+            eps=1e-08,
+
             # TODO figure out this part!
     ):
         super(ColonLitModule, self).__init__()
@@ -35,7 +42,6 @@ class ColonLitModule(LightningModule):
         x, y, path = batch
         x = x['image']
 
-
         logits = self.forward(x)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
@@ -44,9 +50,15 @@ class ColonLitModule(LightningModule):
     def training_step(self, batch, batch_idx):
         loss, preds, targets = self.step(batch)
         acc = self.train_acc(preds=preds, target=targets)
+        # sch = self.lr_schedulers()
+        # if isinstance(sch, torch.optim.lr_scheduler.CosineAnnealingLR):
+        #     sch.step()
+        # if isinstance(sch, torch.optim.lr_scheduler.CosineAnnealingWarmRestarts):
+        #     sch.step()
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=False)
         self.log("train/acc", acc, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("LearningRate", self.optimizer.param_groups[0]['lr'])
 
         # self.log_dict(logs, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         logs = {
@@ -60,7 +72,11 @@ class ColonLitModule(LightningModule):
 
     def training_epoch_end(self, outputs: List[Any]):
         # `outputs` is a list of dicts returned from `training_step()`
-        pass
+        sch = self.lr_schedulers()
+
+        # If the selected scheduler is a ReduceLROnPlateau scheduler.
+        if isinstance(sch, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            sch.step(self.trainer.callback_metrics["val/loss"])
 
     def validation_step(self, batch, batch_idx):
 
@@ -115,10 +131,45 @@ class ColonLitModule(LightningModule):
 
     def configure_optimizers(self):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            self.optimizer,
-            T_max=self.hparams.t_max,
-            eta_min=self.hparams.min_lr
-        )
+        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        #     self.optimizer,
+        #     T_max=self.hparams.t_max,
+        #     eta_min=self.hparams.min_lr
+        # )
+        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #     self.optimizer,
+        #     mode='min',
+        #     factor=0.5,
+        #     patience=5,
+        #     verbose=True
+        # )
+        self.scheduler = self.get_scheduler()
+        if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler, 'monitor': 'val/loss'}
 
         return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler}
+
+    def get_scheduler(self):
+        if self.hparams.scheduler == 'ReduceLROnPlateau':
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                mode='min',
+                factor=self.hparams.factor,
+                patience=self.hparams.patience,
+                verbose=True,
+                eps=self.hparams.eps)
+        elif self.hparams.scheduler == 'CosineAnnealingLR':
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer,
+                T_max=self.hparams.t_max,
+                eta_min=self.hparams.min_lr,
+                last_epoch=-1)
+        elif self.hparams.scheduler == 'CosineAnnealingWarmRestarts':
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                self.optimizer,
+                T_0=self.hparams.T_0,
+                T_mult=1,
+                eta_min=self.hparams.min_lr,
+                last_epoch=-1)
+
+        return scheduler

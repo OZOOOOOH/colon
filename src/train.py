@@ -1,4 +1,5 @@
 from typing import List, Optional
+import wandb
 import hydra
 from omegaconf import DictConfig
 from pytorch_lightning import (
@@ -46,6 +47,10 @@ def train(config: DictConfig) -> Optional[float]:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
 
+    config.logger.wandb.name = config.model.name + '_imgsize_512' + '_scheduler_' + config.model.scheduler + '_lr_' + str(
+        config.model.lr) + '_batchsize_' + str(config.datamodule.batch_size)
+    #setting wandb run name
+
     # Init lightning loggers
     logger: List[LightningLoggerBase] = []
     if "logger" in config:
@@ -53,6 +58,9 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in lg_conf:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
                 logger.append(hydra.utils.instantiate(lg_conf))
+
+
+
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
@@ -72,16 +80,17 @@ def train(config: DictConfig) -> Optional[float]:
     )
 
     # log.info("Tune Learning Rate!")
-    # # trainer.tune(model, datamodule.train_dataloader(), datamodule.val_dataloader())
-    # trainer.tune(model, datamodule)
     # datamodule.setup()
+    # trainer.tune(model)
+    # trainer.tune(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+    # trainer.tune(model, datamodule)
     # lr_finder = trainer.tuner.lr_find(model, datamodule.train_dataloader(), datamodule.val_dataloader())
-    # # lr_finder = trainer.tuner.lr_find(model, datamodule)
-    # new_batch_size = trainer.tuner.scale_batch_size(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+    # lr_finder = trainer.tuner.lr_find(model, datamodule)
     # new_lr = lr_finder.suggestion()
-    # model.hparams.lr = new_lr
-    # model.hparams.batch_size = new_batch_size
     # print(f'new_lr: {new_lr}')
+    # model.hparams.lr = new_lr
+    # new_batch_size = trainer.tuner.scale_batch_size(model, datamodule.train_dataloader(), datamodule.val_dataloader())
+    # model.hparams.batch_size = new_batch_size
     # print(f'new_batch_size: {new_batch_size}')
 
     # Train the model
@@ -119,4 +128,5 @@ def train(config: DictConfig) -> Optional[float]:
         log.info(f"Best model ckpt at {trainer.checkpoint_callback.best_model_path}")
 
     # Return metric score for hyperparameter optimization
+    print(f'score: {score}')
     return score

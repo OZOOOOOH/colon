@@ -18,7 +18,7 @@ defaults:
 # can also be accessed by loggers
 name: "colon"
 
-seed: 12345
+seed: 42
 
 trainer:
   min_epochs: 1

@@ -1,18 +1,22 @@
 import albumentations as A
 from albumentations.core.composition import Compose, OneOf
 from albumentations.pytorch import ToTensorV2
+from albumentations.augmentations import transforms as A_T
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
 from src.utils import bring_dataset_csv
 from cv2 import cv2
+
 
 class CustomDataset(Dataset):
     def __init__(self, df, transform=None):
         self.image_id = df["path"].values
         self.labels = df["class"].values
         self.transform = transform
+
     def __len__(self):
         return len(self.labels)
+
     def __getitem__(self, idx):
         image_path = self.image_id[idx]
         label = self.labels[idx]
@@ -30,7 +34,7 @@ class ColonDataModule(LightningDataModule):
             img_size: int = 256,
             num_workers: int = 4,
             batch_size: int = 32,
-            pin_memory = False
+            pin_memory=False
 
     ):
         super().__init__()
@@ -40,16 +44,44 @@ class ColonDataModule(LightningDataModule):
         self.train_transform = Compose(
             [
                 A.RandomResizedCrop(height=self.hparams.img_size, width=self.hparams.img_size),
-                A.HorizontalFlip(p=0.5),
-                # Flip the input horizontally around the y-axis.
-                A.ShiftScaleRotate(p=0.5),
+
+                OneOf([
+                    A.HorizontalFlip(p=1),
+                    # Flip the input horizontally around the y-axis.
+                    A.VerticalFlip(p=1),
+                    # Flip the input Vertically around the x-axis.
+                    A.RandomRotate90(p=1),
+                ]),
+
+                A.ShiftScaleRotate(
+                    shift_limit=0.05,
+                    scale_limit=0.05,
+                    rotate_limit=15,
+                    p=0.5
+                ),
                 # Randomly apply affine transforms: translate, scale and rotate the input
-                A.RandomBrightnessContrast(p=0.5),
-                # Randomly change brightness and contrast of the input image.
+
+                # A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2, p=0.5),
+                # color augmentation
+
+                OneOf([
+                    # A.MotionBlur(p=1),
+                    # A.OpticalDistortion(p=1),
+                    A.GaussNoise(p=1),
+                    # A_T.Adv
+                    A.GaussianBlur(p=1),
+                    A.ColorJitter(),
+
+                ]),
+                # A.cutout(),
+                A.RandomBrightness(limit=0.15, p=0.5),
+                # Randomly change brightness of the input image.
                 A.Normalize(),
                 # Normalization is applied by the formula: img = (img - mean * max_pixel_value) / (std * max_pixel_value)
+
                 ToTensorV2(),
                 # Convert image and mask to torch.Tensor
+
             ]
         )
 
@@ -57,9 +89,12 @@ class ColonDataModule(LightningDataModule):
         self.test_transform = Compose(
             [
                 A.Resize(height=self.hparams.img_size, width=self.hparams.img_size),
+                # A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 A.Normalize(),
                 ToTensorV2(),
+
             ]
+
         )
 
     @property
@@ -70,7 +105,7 @@ class ColonDataModule(LightningDataModule):
         # Assign train/val/test datasets for use in dataloaders
         if stage == "fit" or stage is None:
             # Random train-validation split
-            train_df, valid_df = bring_dataset_csv(datatype='COLON_PATCHES_1024', stage=None)
+            train_df, valid_df = bring_dataset_csv(datatype='COLON_MANUAL_512', stage=None)
 
             # Train dataset
             self.train_dataset = CustomDataset(train_df, self.train_transform)
@@ -78,9 +113,8 @@ class ColonDataModule(LightningDataModule):
             self.valid_dataset = CustomDataset(valid_df, self.test_transform)
             # Test dataset
         else:
-            test_df = bring_dataset_csv(datatype='COLON_PATCHES_1024', stage='test')
+            test_df = bring_dataset_csv(datatype='COLON_MANUAL_512', stage='test')
             self.test_dataset = CustomDataset(test_df, self.test_transform)
-        print("setup done!")
 
     def train_dataloader(self):
         print("Train Data loading")
