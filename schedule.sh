@@ -154,3 +154,6 @@ python run_colon.py model.lr=1e-5 datamodule.batch_size=16 model.name='efficient
 python run_colon.py model.lr=1e-3 datamodule.batch_size=16 model.name='efficientnet_b4' model.scheduler='ReduceLROnPlateau'
 python run_colon.py model.lr=1e-4 datamodule.batch_size=16 model.name='efficientnet_b4' model.scheduler='ReduceLROnPlateau'
 python run_colon.py model.lr=1e-5 datamodule.batch_size=16 model.name='efficientnet_b4' model.scheduler='ReduceLROnPlateau'
+
+
+python run_colon.py model.lr=1e-5 datamodule.batch_size=32 model.name='resnet50' model.scheduler='ReduceLROnPlateau'

@@ -76,7 +76,7 @@ class ColonDataModule(LightningDataModule):
                 # A.cutout(),
                 A.RandomBrightness(limit=0.15, p=0.5),
                 # Randomly change brightness of the input image.
-                A.Normalize(),
+                # A.Normalize(),
                 # Normalization is applied by the formula: img = (img - mean * max_pixel_value) / (std * max_pixel_value)
 
                 ToTensorV2(),
