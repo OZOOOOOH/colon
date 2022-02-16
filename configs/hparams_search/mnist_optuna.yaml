@@ -47,8 +47,8 @@ hydra:
         choices: [32, 64, 128]
       model.lr:
         type: float
-        low: 0.0001
-        high: 0.2
+        low: 1e-6
+        high: 1e-2
       model.lin1_size:
         type: categorical
         choices: [32, 64, 128, 256, 512]

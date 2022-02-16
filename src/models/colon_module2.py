@@ -25,6 +25,7 @@ class ColonLitModule(LightningModule):
             factor=0.5,
             patience=5,
             eps=1e-08,
+            loss_weight=0.5
 
     ):
         super(ColonLitModule, self).__init__()
@@ -98,7 +99,7 @@ class ColonLitModule(LightningModule):
         loss_compare = self.criterion(logits_compare, comparison)
         preds_compare = torch.argmax(logits_compare, dim=1)
 
-        losses = loss + loss_compare*0.5
+        losses = loss + loss_compare * self.hparams.loss_weight
 
         return losses, preds, y, preds_compare, comparison
 
@@ -206,18 +207,6 @@ class ColonLitModule(LightningModule):
 
     def configure_optimizers(self):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        #     self.optimizer,
-        #     T_max=self.hparams.t_max,
-        #     eta_min=self.hparams.min_lr
-        # )
-        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #     self.optimizer,
-        #     mode='min',
-        #     factor=0.5,
-        #     patience=5,
-        #     verbose=True
-        # )
         self.scheduler = self.get_scheduler()
         if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler, 'monitor': 'val/loss'}
@@ -246,5 +235,36 @@ class ColonLitModule(LightningModule):
                 T_mult=1,
                 eta_min=self.hparams.min_lr,
                 last_epoch=-1)
+        elif self.hparams.scheduler == 'StepLR':
+            scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer, step_size=200, gamma=0.1,
+            )
+        elif self.hparams.scheduler == 'ExponentialLR':
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self.optimizer, gamma=0.95
+            )
+        # elif self.hparams.scheduler == 'MultiStepLR':
+        #     scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        #         )
+        # elif self.hparams.scheduler == 'ConstantLR':
+        #     scheduler = torch.optim.lr_scheduler.ConstantLR(
+        #         )
+        # elif self.hparams.scheduler == 'LinearLR':
+        #     scheduler = torch.optim.lr_scheduler.LinearLR(
+        #         )
+        # elif self.hparams.scheduler == 'ChainedScheduler':
+        #     scheduler = torch.optim.lr_scheduler.ChainedScheduler(
+        #         )
+        # elif self.hparams.scheduler == 'SequentialLR':
+        #     scheduler = torch.optim.lr_scheduler.SequentialLR(
+        #         )
+        # elif self.hparams.scheduler == 'CyclicLR':
+        #     scheduler = torch.optim.lr_scheduler.CyclicLR(
+        #         self.optimizer, base_lr=1e-5, max_lr=1e-2, step_size_up=5,mode="exp_range", gamma=0.95
+        #     )
+        # elif self.hparams.scheduler == 'OneCycleLR':
+        #     scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        #         self.optimizer, max_lr=1e-2,
+        #     )
 
         return scheduler

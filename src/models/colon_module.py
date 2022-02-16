@@ -5,6 +5,7 @@ from pytorch_lightning import plugins
 from pytorch_lightning import LightningModule
 from torchmetrics import MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
+from src.models.components.vit import ViT
 
 
 class ColonLitModule(LightningModule):
@@ -28,7 +29,10 @@ class ColonLitModule(LightningModule):
     ):
         super(ColonLitModule, self).__init__()
         self.save_hyperparameters(logger=False)
-        self.model = timm.create_model(self.hparams.name, pretrained=self.hparams.pretrained, num_classes=4)
+
+        # self.model = timm.create_model(self.hparams.name, pretrained=self.hparams.pretrained, num_classes=4)
+        self.model = ViT(image_size=384, patch_size=16, num_classes=4, dim=768, depth=12, heads=12, mlp_dim=768*4, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.)
+
         self.criterion = torch.nn.CrossEntropyLoss()
         self.train_acc = Accuracy()
         self.val_acc = Accuracy()
@@ -39,8 +43,10 @@ class ColonLitModule(LightningModule):
         return self.model(x)
 
     def step(self, batch):
-        x, y, path = batch
-        x = x['image']
+        x, y = batch
+
+        z = [list(z) for z in zip(x, y)]
+
 
         logits = self.forward(x)
         loss = self.criterion(logits, y)

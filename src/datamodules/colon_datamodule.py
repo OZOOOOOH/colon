@@ -24,7 +24,7 @@ class CustomDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.transform:
             image = self.transform(image=image)
-        return image, label, image_path
+        return image['image'], label
 
 
 class ColonDataModule(LightningDataModule):

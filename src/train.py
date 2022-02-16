@@ -47,9 +47,9 @@ def train(config: DictConfig) -> Optional[float]:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
 
-    config.logger.wandb.name = config.model.name + '_imgsize_512' + '_scheduler_' + config.model.scheduler + '_lr_' + str(
+    config.logger.wandb.name = 'compare_' + config.model.name + '_imgsize_512'+'_lw_'+ str(config.model.loss_weight) + '_scheduler_' + config.model.scheduler + '_lr_' + str(
         config.model.lr) + '_batchsize_' + str(config.datamodule.batch_size)
-    #setting wandb run name
+    # setting wandb run name
 
     # Init lightning loggers
     logger: List[LightningLoggerBase] = []
@@ -58,9 +58,6 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in lg_conf:
                 log.info(f"Instantiating logger <{lg_conf._target_}>")
                 logger.append(hydra.utils.instantiate(lg_conf))
-
-
-
 
     # Init lightning trainer
     log.info(f"Instantiating trainer <{config.trainer._target_}>")
