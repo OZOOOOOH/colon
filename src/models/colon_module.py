@@ -15,8 +15,8 @@ class ColonLitModule(LightningModule):
             weight_decay: float = 0.0005,
             t_max: int = 20,
             min_lr: int = 1e-6,
-            T_0 = 15,
-            T_mult = 2,
+            T_0=15,
+            T_mult=2,
             eta_min=1e-6,
             name='vit_base_patch16_224',
             pretrained=True,
@@ -25,13 +25,12 @@ class ColonLitModule(LightningModule):
             patience=5,
             eps=1e-08,
 
-            # TODO figure out this part!
     ):
         super(ColonLitModule, self).__init__()
         self.save_hyperparameters(logger=False)
 
-        # self.model = timm.create_model(self.hparams.name, pretrained=self.hparams.pretrained, num_classes=4)
-        self.model = ViT(image_size=384, patch_size=16, num_classes=4, dim=768, depth=12, heads=12, mlp_dim=768*4, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.)
+        self.model = timm.create_model(self.hparams.name, pretrained=self.hparams.pretrained, num_classes=4)
+        # self.model = ViT(image_size=384, patch_size=16, num_classes=4, dim=768, depth=12, heads=12, mlp_dim=768*4, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.)
 
         self.criterion = torch.nn.CrossEntropyLoss()
         self.train_acc = Accuracy()
@@ -44,11 +43,13 @@ class ColonLitModule(LightningModule):
 
     def step(self, batch):
         x, y = batch
+        logits = self.forward(x.float())
+        if isinstance(logits, tuple):
+            x, x_dist = logits
+            loss = self.criterion(x_dist, y)
+            preds = torch.argmax(x_dist, dim=1)
+            return loss, preds, y
 
-        z = [list(z) for z in zip(x, y)]
-
-
-        logits = self.forward(x)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
         return loss, preds, y
@@ -56,11 +57,6 @@ class ColonLitModule(LightningModule):
     def training_step(self, batch, batch_idx):
         loss, preds, targets = self.step(batch)
         acc = self.train_acc(preds=preds, target=targets)
-        # sch = self.lr_schedulers()
-        # if isinstance(sch, torch.optim.lr_scheduler.CosineAnnealingLR):
-        #     sch.step()
-        # if isinstance(sch, torch.optim.lr_scheduler.CosineAnnealingWarmRestarts):
-        #     sch.step()
 
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=False)
         self.log("train/acc", acc, on_step=True, on_epoch=True, prog_bar=True)
@@ -135,26 +131,6 @@ class ColonLitModule(LightningModule):
         self.val_acc.reset()
         self.test_acc.reset()
 
-    def configure_optimizers(self):
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        #     self.optimizer,
-        #     T_max=self.hparams.t_max,
-        #     eta_min=self.hparams.min_lr
-        # )
-        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #     self.optimizer,
-        #     mode='min',
-        #     factor=0.5,
-        #     patience=5,
-        #     verbose=True
-        # )
-        self.scheduler = self.get_scheduler()
-        if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-            return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler, 'monitor': 'val/loss'}
-
-        return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler}
-
     def get_scheduler(self):
         if self.hparams.scheduler == 'ReduceLROnPlateau':
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -177,5 +153,23 @@ class ColonLitModule(LightningModule):
                 T_mult=1,
                 eta_min=self.hparams.min_lr,
                 last_epoch=-1)
+        elif self.hparams.scheduler == 'StepLR':
+            scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer, step_size=200, gamma=0.1,
+            )
+        elif self.hparams.scheduler == 'ExponentialLR':
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self.optimizer, gamma=0.95
+            )
 
         return scheduler
+
+    def configure_optimizers(self):
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
+
+        self.scheduler = self.get_scheduler()
+
+        if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler, 'monitor': 'val/loss'}
+
+        return {"optimizer": self.optimizer, "lr_scheduler": self.scheduler}

@@ -1,5 +1,5 @@
 from typing import Optional, Tuple
-
+import numpy as np
 import torch
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
@@ -83,6 +83,7 @@ class MNISTDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
+            worker_init_fn=np.random.seed(42)
         )
 
     def val_dataloader(self):
@@ -92,6 +93,7 @@ class MNISTDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
+            worker_init_fn=np.random.seed(42)
         )
 
     def test_dataloader(self):
@@ -102,4 +104,5 @@ class MNISTDataModule(LightningDataModule):
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
+            worker_init_fn=np.random.seed(42)
         )

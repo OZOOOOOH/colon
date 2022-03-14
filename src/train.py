@@ -1,5 +1,6 @@
 from typing import List, Optional
 import wandb
+import os
 import hydra
 from omegaconf import DictConfig
 from pytorch_lightning import (
@@ -9,6 +10,8 @@ from pytorch_lightning import (
     Trainer,
     seed_everything,
 )
+import torch
+import torch.backends.cudnn as cudnn
 from pytorch_lightning.loggers import LightningLoggerBase
 
 from src import utils
@@ -30,6 +33,10 @@ def train(config: DictConfig) -> Optional[float]:
     # Set seed for random number generators in pytorch, numpy and python.random
     if config.get("seed"):
         seed_everything(config.seed, workers=True)
+        cudnn.benchmark = False
+        cudnn.deterministic = True
+        os.environ['PYTHONHASHSEED'] = str(config.seed)
+        torch.use_deterministic_algorithms(True)
 
     # Init lightning datamodule
     log.info(f"Instantiating datamodule <{config.datamodule._target_}>")
@@ -46,10 +53,16 @@ def train(config: DictConfig) -> Optional[float]:
             if "_target_" in cb_conf:
                 log.info(f"Instantiating callback <{cb_conf._target_}>")
                 callbacks.append(hydra.utils.instantiate(cb_conf))
+    # config.logger
+    if 'logger' in config.keys():
+        config.logger.wandb.name = 'compare_' + config.model.name + '_imgsize_512' + '_lw_' + str(
+            config.model.loss_weight) + '_scheduler_' + config.model.scheduler + '_lr_' + str(
+            config.model.lr) + '_batchsize_' + str(config.datamodule.batch_size) + '_discriminator1+2'
 
-    config.logger.wandb.name = 'compare_' + config.model.name + '_imgsize_512'+'_lw_'+ str(config.model.loss_weight) + '_scheduler_' + config.model.scheduler + '_lr_' + str(
-        config.model.lr) + '_batchsize_' + str(config.datamodule.batch_size)
-    # setting wandb run name
+    # if 'logger' in config.keys():
+    #     config.logger.wandb.name = config.model.name + '_imgsize_512' + '_scheduler_' + config.model.scheduler + '_lr_' + \
+    #                                str(config.model.lr) + '_batchsize_' + str(config.datamodule.batch_size)
+    #     # setting wandb run name
 
     # Init lightning loggers
     logger: List[LightningLoggerBase] = []
@@ -80,7 +93,7 @@ def train(config: DictConfig) -> Optional[float]:
     # datamodule.setup()
     # trainer.tune(model)
     # trainer.tune(model, datamodule.train_dataloader(), datamodule.val_dataloader())
-    # trainer.tune(model, datamodule)
+
     # lr_finder = trainer.tuner.lr_find(model, datamodule.train_dataloader(), datamodule.val_dataloader())
     # lr_finder = trainer.tuner.lr_find(model, datamodule)
     # new_lr = lr_finder.suggestion()

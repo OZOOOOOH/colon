@@ -1,6 +1,6 @@
 _target_: src.models.colon_module2.ColonLitModule
 
-name: vit_base_patch16_384
+name: vit_large_r50_s32_384
 
 # only input 224
 
@@ -41,4 +41,4 @@ pretrained: True
 scheduler: 'CosineAnnealingLR'
 factor: 0.5
 patience: 3
-loss_weight: 0.5
+loss_weight: 0.1

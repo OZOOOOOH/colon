@@ -1,0 +1,1 @@
+python run_colon.py model.lr=1e-4 model.loss_weight=0.5 datamodule.batch_size=8 model.name='swin_large_patch4_window12_384' model.scheduler='CosineAnnealingWarmRestarts' datamodule.img_size=384

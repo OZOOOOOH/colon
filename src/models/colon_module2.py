@@ -1,5 +1,6 @@
 from typing import Any, List
 import torch
+import torch.nn as nn
 import timm
 from pytorch_lightning import plugins
 from pytorch_lightning import LightningModule
@@ -35,7 +36,25 @@ class ColonLitModule(LightningModule):
 
         # self.model = ViT(image_size=384, patch_size=16, num_classes=4, dim=768, depth=12, heads=12, mlp_dim=768 * 4,
         #                  pool='cls', channels=3, dim_head=64, dropout=0., emb_dropout=0.)
-        self.compare_layer = torch.nn.Linear(self.model.embed_dim * 2, 3)
+        self.compare_layer = nn.Linear(self.model.embed_dim * 2, 3)
+        self.discriminator_layer1 = nn.Sequential(
+            nn.Linear(self.model.embed_dim, 512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 4),
+        )
+        self.discriminator_layer2 = nn.Sequential(
+            nn.Linear(self.model.embed_dim * 2, 512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 3),
+        )
+
+        # discriminator 구조
+        # 레이어 - 드롭아웃 - 레이어
+        # 512 512 4 3
 
         self.criterion = torch.nn.CrossEntropyLoss()
         self.train_acc = Accuracy()
@@ -49,7 +68,7 @@ class ColonLitModule(LightningModule):
         self.val_acc_compare_best = MaxMetric()
 
     def forward(self, x):
-        return self.model(x)
+        return self.discriminator_layer1(self.model.forward_features(x.float()))
 
     def shuffle(self, x, y):
 
@@ -85,17 +104,43 @@ class ColonLitModule(LightningModule):
         x, y = batch
         # logits = self.forward(x)
         features = self.model.forward_features(x.float())
-        logits = self.model.head(features)
+        # logits = self.model.head(features)
+        logits = self.discriminator_layer1(features)
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
 
         indices, comparison = self.shuffle(x, y)
         shuffle_features = [features[i] for i in indices]
         shuffle_features = torch.stack(shuffle_features, dim=0)
+        # size of shuffle_feature is [16, 768]
 
         concat_features = torch.cat((features, shuffle_features), dim=1)
 
-        logits_compare = self.compare_layer(concat_features)
+        logits_compare = self.discriminator_layer2(concat_features)
+        # logits_compare = self.compare_layer(concat_features)
+        loss_compare = self.criterion(logits_compare, comparison)
+        preds_compare = torch.argmax(logits_compare, dim=1)
+
+        losses = loss + loss_compare * self.hparams.loss_weight
+
+        return losses, preds, y, preds_compare, comparison
+
+    def val_step(self, batch):
+        x, y = batch
+        features = self.model.forward_features(x.float())
+        logits = self.discriminator_layer1(features)
+        loss = self.criterion(logits, y)
+        preds = torch.argmax(logits, dim=1)
+
+        indices, comparison = self.shuffle(x, y)
+        shuffle_features = [features[i] for i in indices]
+        shuffle_features = torch.stack(shuffle_features, dim=0)
+        # size of shuffle_feature is [16, 768]
+
+        concat_features = torch.cat((features, shuffle_features), dim=1)
+
+        logits_compare = self.discriminator_layer2(concat_features)
+        # logits_compare = self.compare_layer(concat_features)
         loss_compare = self.criterion(logits_compare, comparison)
         preds_compare = torch.argmax(logits_compare, dim=1)
 
@@ -141,7 +186,7 @@ class ColonLitModule(LightningModule):
 
     def validation_step(self, batch, batch_idx):
 
-        loss, preds, targets, preds_compare, comparison = self.step(batch)
+        loss, preds, targets, preds_compare, comparison = self.val_step(batch)
 
         acc = self.val_acc(preds, targets)
         acc_compare = self.val_acc_compare(preds=preds_compare, target=comparison)
